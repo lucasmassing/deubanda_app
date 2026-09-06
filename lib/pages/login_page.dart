@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'register_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
   @override
   _LoginPageState createState() => _LoginPageState();
 }
@@ -8,15 +12,55 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
-  
   final TextEditingController _passwordController = TextEditingController();
 
-  void _fazerLogin() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implementar a lógica de autenticação (Firebase, API própria, etc.)
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Processando login...')));
+  bool _isLoading = false;
+
+  Future<void> _fazerLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Autenticação com Supabase
+        await Supabase.instance.client.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login efetuado com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // TODO: Redirecionar para a Home/Perfil do Músico (UC03)
+        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+      }
+    } on AuthException catch (error) {
+      if (mounted) {
+        // Exibe mensagem se credenciais forem inválidas (Regra do DVP para HU01)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro: ${error.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro inesperado ao fazer login.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -27,7 +71,7 @@ class _LoginPageState extends State<LoginPage> {
       body: Center(
         child: SingleChildScrollView(
           child: ConstrainedBox(
-            constraints: BoxConstraints(
+            constraints: const BoxConstraints(
               maxWidth: 400,
             ), // Limita a largura na Web
             child: Card(
@@ -42,25 +86,25 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.music_note,
                         size: 64,
                         color: Colors.deepPurple,
                       ),
-                      SizedBox(height: 16),
-                      Text(
+                      const SizedBox(height: 16),
+                      const Text(
                         'DeuBanda',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 8),
-                      Text('Conectando músicos independentes'),
-                      SizedBox(height: 32),
+                      const SizedBox(height: 8),
+                      const Text('Conectando músicos independentes'),
+                      const SizedBox(height: 32),
                       TextFormField(
                         controller: _emailController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'E-mail',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.email),
@@ -72,10 +116,10 @@ class _LoginPageState extends State<LoginPage> {
                           return null;
                         },
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _passwordController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Senha',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.lock),
@@ -88,22 +132,42 @@ class _LoginPageState extends State<LoginPage> {
                           return null;
                         },
                       ),
-                      SizedBox(height: 24),
+                      const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
                         height: 48,
                         child: ElevatedButton(
-                          onPressed: _fazerLogin,
-                          child: Text('Entrar', style: TextStyle(fontSize: 16)),
+                          onPressed: _isLoading ? null : _fazerLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Entrar',
+                                  style: TextStyle(fontSize: 16),
+                                ),
                         ),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextButton(
                         onPressed: () {
-                          // TODO: Navegar para a tela de Cadastro (RF02)
-                          print("Navegar para cadastro");
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterPage(),
+                            ),
+                          );
                         },
-                        child: Text('Ainda não tem conta? Cadastre-se'),
+                        child: const Text('Ainda não tem conta? Cadastre-se'),
                       ),
                     ],
                   ),
