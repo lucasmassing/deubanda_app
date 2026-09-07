@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/auth_viewmodel.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -10,14 +11,12 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool _aceitouTermosLGPD = false;
-  bool _isLoading = false;
 
-  // Validador de senha: Mínimo 8 caracteres, letras e números (Regra do DVP)
   String? _validarSenha(String? value) {
     if (value == null || value.isEmpty) {
       return 'Por favor, insira uma senha.';
@@ -32,11 +31,9 @@ class _RegisterPageState extends State<RegisterPage> {
     return null;
   }
 
-  Future<void> _realizarCadastro() async {
-    // Valida os campos de texto
+  Future<void> _processarCadastro() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Valida o aceite da LGPD (Regra do DVP)
     if (!_aceitouTermosLGPD) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -49,51 +46,42 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    // Acessa o ViewModel
+    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
 
-    try {
-      // Chamada para o Supabase Auth
-        await Supabase.instance.client.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-        data: {
-          'full_name': _nameController.text.trim(),
-        }, // Salva o nome nos metadados
+    final sucesso = await authViewModel.realizarCadastro(
+      _nameController.text.trim(),
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
+
+    if (!mounted) return;
+
+    if (sucesso) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cadastro realizado com sucesso! Faça login para continuar.',
+          ),
+          backgroundColor: Colors.green,
+        ),
       );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Cadastro realizado com sucesso! Faça login para continuar.',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context); // Volta para a tela de login
-      }
-    } on AuthException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message), backgroundColor: Colors.red),
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro inesperado ao cadastrar.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      Navigator.pop(context); // Volta para a tela de login
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authViewModel.errorMessage ?? 'Erro ao cadastrar.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Observa o estado de carregamento do ViewModel
+    final isLoading = context.watch<AuthViewModel>().isLoading;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Criar Conta'),
@@ -183,12 +171,12 @@ class _RegisterPageState extends State<RegisterPage> {
                         width: double.infinity,
                         height: 48,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _realizarCadastro,
+                          onPressed: isLoading ? null : _processarCadastro,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
                             foregroundColor: Colors.white,
                           ),
-                          child: _isLoading
+                          child: isLoading
                               ? const SizedBox(
                                   width: 24,
                                   height: 24,

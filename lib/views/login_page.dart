@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import 'register_page.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+//import 'profile_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,69 +13,54 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
-  bool _isLoading = false;
+  Future<void> _processarLogin() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  Future<void> _fazerLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    // Acessa o ViewModel sem escutar as mudanças continuamente (listen: false)
+    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
 
-    setState(() => _isLoading = true);
+    final sucesso = await authViewModel.fazerLogin(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
 
-    try {
-      // Autenticação com Supabase
-        await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+    if (!mounted) return;
+
+    if (sucesso) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login efetuado com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
       );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login efetuado com sucesso!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        // TODO: Redirecionar para a Home/Perfil do Músico (UC03)
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
-      }
-    } on AuthException catch (error) {
-      if (mounted) {
-        // Exibe mensagem se credenciais forem inválidas (Regra do DVP para HU01)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro: ${error.message}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro inesperado ao fazer login.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+     // Navigator.pushReplacement(
+     //   context,
+     //   MaterialPageRoute(builder: (context) => const ProfilePage()),
+     // );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authViewModel.errorMessage ?? 'Erro'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Escuta o estado de carregamento do ViewModel
+    final isLoading = context.watch<AuthViewModel>().isLoading;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: Center(
         child: SingleChildScrollView(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 400,
-            ), // Limita a largura na Web
+            constraints: const BoxConstraints(maxWidth: 400),
             child: Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -109,40 +96,34 @@ class _LoginPageState extends State<LoginPage> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.email),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, insira seu e-mail';
-                          }
-                          return null;
-                        },
+                        validator: (value) => (value == null || value.isEmpty)
+                            ? 'Insira seu e-mail'
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _passwordController,
+                        obscureText: true,
                         decoration: const InputDecoration(
                           labelText: 'Senha',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.lock),
                         ),
-                        obscureText: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, insira sua senha';
-                          }
-                          return null;
-                        },
+                        validator: (value) => (value == null || value.isEmpty)
+                            ? 'Insira sua senha'
+                            : null,
                       ),
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
                         height: 48,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _fazerLogin,
+                          onPressed: isLoading ? null : _processarLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
                             foregroundColor: Colors.white,
                           ),
-                          child: _isLoading
+                          child: isLoading
                               ? const SizedBox(
                                   width: 24,
                                   height: 24,
@@ -159,14 +140,12 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 16),
                       TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RegisterPage(),
-                            ),
-                          );
-                        },
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterPage(),
+                          ),
+                        ),
                         child: const Text('Ainda não tem conta? Cadastre-se'),
                       ),
                     ],

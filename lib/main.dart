@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'pages/login_page.dart';
+import 'package:provider/provider.dart';
+import 'viewmodels/auth_viewmodel.dart';
+import 'views/login_page.dart';
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     publishableKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
-  
-  runApp(const DeuBandaApp());
+
+  runApp(
+    // Injeta o ViewModel na raiz do App
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthViewModel()),
+      ],
+      child: const DeuBandaApp(),
+    ),
+  );
 }
 
 class DeuBandaApp extends StatelessWidget {
@@ -23,10 +34,10 @@ class DeuBandaApp extends StatelessWidget {
       title: 'DeuBanda App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: LoginPage(),
+      home: const LoginPage(),
     );
   }
 }
