@@ -50,10 +50,8 @@ class _ProfilePageState extends State<ProfilePage> {
       perfilNome: _nomeController.text.trim(),
       perfilBio: _bioController.text.trim(),
       perfilCep: _cepController.text.trim(),
-      // O banco espera REAL para coordenadas, manteremos null até integrar o GPS
       perfilCoordenadas: null,
-      perfilCidade:
-          viewModel.cidadeEstado, // Captura a cidade resolvida pelo ViaCEP
+      perfilCidade: viewModel.cidadeEstado,
       perfilObjetivo: _objetivoController.text.trim(),
       perfilArtistaReferencia: _referenciaController.text.trim(),
     );
@@ -89,6 +87,107 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // Modal para adicionar um novo instrumento
+  void _mostrarModalAdicionarInstrumento(
+    BuildContext context,
+    ProfileViewModel viewModel,
+  ) {
+    int? instrumentoSelecionado;
+    String nivelSelecionado = 'Iniciante';
+    final niveis = ['Iniciante', 'Intermediário', 'Avançado', 'Profissional'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Adicionar Instrumento',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    decoration: const InputDecoration(
+                      labelText: 'Instrumento',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: instrumentoSelecionado,
+                    items: viewModel.todosInstrumentos.map((inst) {
+                      return DropdownMenuItem(
+                        value: inst.instrumentoId,
+                        child: Text(inst.instrumentoNome),
+                      );
+                    }).toList(),
+                    onChanged: (val) =>
+                        setModalState(() => instrumentoSelecionado = val),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Nível de Proficiência',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: nivelSelecionado,
+                    items: niveis.map((nivel) {
+                      return DropdownMenuItem(value: nivel, child: Text(nivel));
+                    }).toList(),
+                    onChanged: (val) =>
+                        setModalState(() => nivelSelecionado = val!),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (instrumentoSelecionado != null) {
+                          Navigator.pop(context); // Fecha o modal
+                          final sucesso = await viewModel.adicionarInstrumento(
+                            instrumentoSelecionado!,
+                            nivelSelecionado,
+                          );
+                          if (!sucesso && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(viewModel.errorMessage ?? 'Erro'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Adicionar'),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<ProfileViewModel>();
@@ -113,114 +212,169 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    controller: _nomeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome ou Nome Artístico',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                    validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _bioController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Biografia (Fale sobre sua experiência)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _cepController,
-                    decoration: const InputDecoration(
-                      labelText: 'CEP (Apenas números)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.location_on),
-                      counterText: '',
-                    ),
-                    keyboardType: TextInputType.number,
-                    maxLength: 8,
-                    onChanged: (value) {
-                      if (value.length == 8) {
-                        viewModel.buscarCep(value);
-                      }
-                    },
-                  ),
-                  if (viewModel.cidadeEstado != null)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        top: 8.0,
-                        left: 4.0,
-                        bottom: 8.0,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _nomeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome ou Nome Artístico',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.person),
+                        ),
+                        validator: (v) =>
+                            v!.isEmpty ? 'Campo obrigatório' : null,
                       ),
-                      child: Text(
-                        viewModel.cidadeEstado!,
-                        style: TextStyle(
-                          color:
-                              viewModel.cidadeEstado!.contains('Erro') ||
-                                  viewModel.cidadeEstado!.contains(
-                                    'não encontrado',
-                                  )
-                              ? Colors.red
-                              : Colors.green,
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _bioController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Biografia',
+                          border: OutlineInputBorder(),
                         ),
                       ),
-                    ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _objetivoController,
-                    decoration: const InputDecoration(
-                      labelText: 'Objetivo (Ex: Formar banda, Freelance)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.track_changes),
-                    ),
-                    maxLength: 30, // Limite imposto pelo VARCHAR(30) no banco
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _referenciaController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Artistas de Referência',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.star),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: viewModel.isLoading ? null : _salvarDados,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _cepController,
+                        decoration: const InputDecoration(
+                          labelText: 'CEP',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.location_on),
+                          counterText: '',
+                        ),
+                        keyboardType: TextInputType.number,
+                        maxLength: 8,
+                        onChanged: (value) {
+                          if (value.length == 8) viewModel.buscarCep(value);
+                        },
                       ),
-                      child: viewModel.isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Salvar Perfil',
-                              style: TextStyle(fontSize: 16),
+                      if (viewModel.cidadeEstado != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text(
+                            viewModel.cidadeEstado!,
+                            style: TextStyle(
+                              color: viewModel.cidadeEstado!.contains('Erro')
+                                  ? Colors.red
+                                  : Colors.green,
+                              fontWeight: FontWeight.bold,
                             ),
-                    ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _objetivoController,
+                        decoration: const InputDecoration(
+                          labelText: 'Objetivo',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.track_changes),
+                        ),
+                        maxLength: 30,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _referenciaController,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Artistas de Referência',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.star),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: viewModel.isLoading ? null : _salvarDados,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: viewModel.isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                              : const Text(
+                                  'Salvar Dados Básicos',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24.0),
+                  child: Divider(thickness: 2),
+                ),
+
+                // SEÇÃO DE INSTRUMENTOS
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Meus Instrumentos',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.add_circle,
+                        color: Colors.deepPurple,
+                        size: 32,
+                      ),
+                      onPressed: () =>
+                          _mostrarModalAdicionarInstrumento(context, viewModel),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                if (viewModel.meusInstrumentos.isEmpty)
+                  const Text(
+                    'Nenhum instrumento adicionado. Clique no "+" para adicionar.',
+                  )
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: viewModel.meusInstrumentos.length,
+                    itemBuilder: (context, index) {
+                      final item = viewModel.meusInstrumentos[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.music_note,
+                            color: Colors.deepPurple,
+                          ),
+                          title: Text(
+                            item.instrumentoNome ?? 'Desconhecido',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            'Nível: ${item.instrumentoNivel ?? "Não informado"}',
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => viewModel.removerInstrumento(
+                              item.instrumentoId,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+              ],
             ),
           ),
         ),
