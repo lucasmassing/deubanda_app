@@ -1,8 +1,10 @@
+import 'package:deubanda_app/viewmodels/profile_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import 'register_page.dart';
 import 'profile_page.dart';
+import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,7 +21,6 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _processarLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Acessa o ViewModel sem escutar as mudanças continuamente (listen: false)
     final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
 
     final sucesso = await authViewModel.fazerLogin(
@@ -30,16 +31,35 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     if (sucesso) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login efetuado com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const ProfilePage()),
-      );
+      
+      await Provider.of<ProfileViewModel>(context, listen: false).carregarPerfil();
+
+      // Após o login dar certo, verifica se já tem perfil
+      final temPerfil = await authViewModel.verificarPerfilExistente();
+
+      if (!mounted) return;
+
+      if (temPerfil) {
+        // Se já tem perfil, vai direto para a Home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      } else {
+        // Se for o primeiro acesso, obriga a criar o perfil
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Bem-vindo! Por favor, complete seu perfil para continuar.',
+            ),
+            backgroundColor: Colors.blue,
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfilePage()),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

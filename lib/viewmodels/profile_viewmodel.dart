@@ -196,7 +196,16 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void limparDados() {
+    _perfil = null;
+    _meusInstrumentos = [];
+    _cidadeEstado = null;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Future<void> fazerLogout() async {
+    limparDados(); // Limpa o estado da memória antes de sair
     await _supabase.auth.signOut();
   }
 }

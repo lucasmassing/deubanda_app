@@ -60,4 +60,22 @@ class AuthViewModel extends ChangeNotifier {
       _setLoading(false);
     }
   }
+
+  // Verifica se o usuário logado já possui um perfil salvo no banco
+  Future<bool> verificarPerfilExistente() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      final data = await _supabase
+          .from('perfis_musicos')
+          .select('perfil_id')
+          .eq('perfil_id', user.id)
+          .maybeSingle();
+
+      return data != null; // Se for diferente de null, o perfil já existe
+    } catch (e) {
+      return false;
+    }
+  }
 }
