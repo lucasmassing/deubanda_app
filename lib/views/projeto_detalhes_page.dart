@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/projeto.dart';
 import '../viewmodels/projeto_viewmodel.dart';
+import 'projeto_candidatos_page.dart';
 
 class ProjetoDetalhesPage extends StatelessWidget {
   final Projeto projeto;
@@ -76,7 +77,13 @@ class ProjetoDetalhesPage extends StatelessWidget {
           child: isDonoDoProjeto
               ? OutlinedButton.icon(
                   onPressed: () {
-                    // Futuro: Ver quem se candidatou na vaga dele
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ProjetoCandidatosPage(projeto: projeto),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.list_alt),
                   label: const Text('Ver Candidatos'),

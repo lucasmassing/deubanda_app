@@ -95,4 +95,30 @@ class ProjetoViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<List<Map<String, dynamic>>> buscarCandidatosDoProjeto(
+    String projetoId,
+  ) async {
+    try {
+      final data = await _supabase
+          .from('candidaturas')
+          .select('''
+            candidatura_id,
+            candidatura_status,
+            candidatura_data,
+            perfis_musicos (
+              perfil_nome,
+              perfil_cidade,
+              perfil_bio
+            )
+          ''')
+          .eq('projeto_id', projetoId)
+          .order('candidatura_data', ascending: false);
+
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      debugPrint('Erro ao buscar candidatos: $e');
+      return [];
+    }
+  }
 }
