@@ -57,4 +57,42 @@ class ProjetoViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // fluxo de candidaturas
+  Future<bool> candidatarSe(String projetoId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return false;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // 1. Verifica se já existe uma candidatura deste usuário para esta vaga
+      final existente = await _supabase
+          .from('candidaturas')
+          .select()
+          .eq('candidato_id', userId)
+          .eq('projeto_id', projetoId)
+          .maybeSingle();
+
+      if (existente != null) {
+        _errorMessage = 'Você já se candidatou a esta vaga!';
+        return false;
+      }
+
+      // 2. Insere a nova candidatura
+      await _supabase.from('candidaturas').insert({
+        'candidato_id': userId,
+        'projeto_id': projetoId,
+      });
+
+      return true;
+    } catch (e) {
+      _errorMessage = 'Erro ao enviar candidatura.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

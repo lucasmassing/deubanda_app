@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../viewmodels/projeto_viewmodel.dart';
 import '../models/projeto.dart';
+import 'projeto_detalhes_page.dart';
 
 class ProjetosPage extends StatefulWidget {
   const ProjetosPage({super.key});
@@ -218,7 +219,13 @@ class _ProjetosPageState extends State<ProjetosPage> {
                           alignment: Alignment.centerRight,
                           child: OutlinedButton(
                             onPressed: () {
-                              // Futura integração com o módulo de Candidaturas
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ProjetoDetalhesPage(projeto: projeto),
+                                ),
+                              );
                             },
                             child: const Text('Ver Detalhes'),
                           ),
