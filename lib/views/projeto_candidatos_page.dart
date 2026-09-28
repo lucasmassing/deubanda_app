@@ -18,10 +18,115 @@ class _ProjetoCandidatosPageState extends State<ProjetoCandidatosPage> {
   @override
   void initState() {
     super.initState();
-    // Inicia a busca dos candidatos assim que a tela abre
-    _futureCandidatos = context
-        .read<ProjetoViewModel>()
-        .buscarCandidatosDoProjeto(widget.projeto.projetoId!);
+    _carregarCandidatos();
+  }
+
+  void _carregarCandidatos() {
+    setState(() {
+      _futureCandidatos = context
+          .read<ProjetoViewModel>()
+          .buscarCandidatosDoProjeto(widget.projeto.projetoId!);
+    });
+  }
+
+  void _mostrarModalAvaliacao(
+    BuildContext context,
+    Map<String, dynamic> candidatoData,
+  ) {
+    final perfil = candidatoData['perfis_musicos'];
+    final candidaturaId = candidatoData['candidatura_id'];
+    final viewModel = context.read<ProjetoViewModel>();
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                perfil['perfil_nome'] ?? 'Músico',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    perfil['perfil_cidade'] ?? 'Localização não informada',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+              const Divider(height: 32, thickness: 1),
+              const Text(
+                'Biografia',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                perfil['perfil_bio'] ?? 'O músico não forneceu uma biografia.',
+                style: const TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context); // Fecha o modal
+                        await viewModel.atualizarStatusCandidatura(
+                          candidaturaId,
+                          'RECUSADO',
+                        );
+                        _carregarCandidatos(); // Atualiza a lista na ecrã
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Recusar'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context); // Fecha o modal
+                        await viewModel.atualizarStatusCandidatura(
+                          candidaturaId,
+                          'ACEITO',
+                        );
+                        _carregarCandidatos();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.check),
+                      label: const Text('Aceitar'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -48,8 +153,17 @@ class _ProjetoCandidatosPageState extends State<ProjetoCandidatosPage> {
             itemCount: candidatos.length,
             itemBuilder: (context, index) {
               final item = candidatos[index];
-              final perfil = item['perfis_musicos']; // Dados vindos do Join
+              final perfil = item['perfis_musicos'];
               final status = item['candidatura_status'];
+
+              Color statusColor;
+              if (status == 'ACEITO') {
+                statusColor = Colors.green;
+              } else if (status == 'RECUSADO') {
+                statusColor = Colors.red;
+              } else {
+                statusColor = Colors.orange;
+              }
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -72,19 +186,19 @@ class _ProjetoCandidatosPageState extends State<ProjetoCandidatosPage> {
                       Text(
                         'Status: $status',
                         style: TextStyle(
-                          color: status == 'PENDENTE'
-                              ? Colors.orange
-                              : Colors.green,
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  trailing: OutlinedButton(
-                    onPressed: () {
-                      // Futuro: Avaliar o músico e mudar o status para ACEITO
-                    },
-                    child: const Text('Avaliar'),
-                  ),
+                  trailing: status == 'PENDENTE'
+                      ? OutlinedButton(
+                          onPressed: () =>
+                              _mostrarModalAvaliacao(context, item),
+                          child: const Text('Avaliar'),
+                        )
+                      : const Icon(Icons.fact_check, color: Colors.grey),
                 ),
               );
             },

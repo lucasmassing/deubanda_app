@@ -121,4 +121,27 @@ class ProjetoViewModel extends ChangeNotifier {
       return [];
     }
   }
+
+  Future<bool> atualizarStatusCandidatura(
+    String candidaturaId,
+    String novoStatus,
+  ) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _supabase
+          .from('candidaturas')
+          .update({'candidatura_status': novoStatus})
+          .eq('candidatura_id', candidaturaId);
+
+      return true;
+    } catch (e) {
+      _errorMessage = 'Erro ao atualizar o status da candidatura.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }
