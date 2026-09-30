@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'projetos_page.dart';
 import 'profile_page.dart';
+import 'feed_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,7 +14,7 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
 
   final List<Widget> _paginas = const [
-    _FeedPlaceholderPage(),
+    FeedPage(),
     ProjetosPage(),
     ProfilePage(),
   ];
@@ -36,37 +37,6 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Vagas'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
-      ),
-    );
-  }
-}
-
-// Tela temporária para a aba Explorar enquanto desenvolvemos o Match de Músicos
-class _FeedPlaceholderPage extends StatelessWidget {
-  const _FeedPlaceholderPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('DeuBanda'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.library_music, size: 80, color: Colors.deepPurple),
-            SizedBox(height: 16),
-            Text(
-              'Feed de Músicos & Matchings',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text('Em breve: navegue por músicos e faça conexões!'),
-          ],
-        ),
       ),
     );
   }

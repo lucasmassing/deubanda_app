@@ -6,6 +6,7 @@ import 'viewmodels/auth_viewmodel.dart';
 import 'views/login_page.dart';
 import 'viewmodels/profile_viewmodel.dart';
 import 'viewmodels/projeto_viewmodel.dart';
+import 'viewmodels/matching_viewmodel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
         ChangeNotifierProvider(create: (_) => ProfileViewModel()),
         ChangeNotifierProvider(create: (_) => ProjetoViewModel()),
+        ChangeNotifierProvider(create: (_) => MatchingViewModel()),
       ],
       child: const DeuBandaApp(),
     ),
