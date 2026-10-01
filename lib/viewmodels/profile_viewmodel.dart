@@ -20,8 +20,11 @@ class ProfileViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> _meusGeneros = [];
   List<Map<String, dynamic>> get meusGeneros => _meusGeneros;
 
-  List<String> _horariosDisponiveis = []; // Formato: "Segunda-Manhã"
+  List<String> _horariosDisponiveis = [];
   List<String> get horariosDisponiveis => _horariosDisponiveis;
+
+  List<Map<String, dynamic>> _todosGeneros = [];
+  List<Map<String, dynamic>> get todosGeneros => _todosGeneros;
 
   bool _isFetching = true;
   bool get isFetching => _isFetching;
@@ -41,6 +44,7 @@ class ProfileViewModel extends ChangeNotifier {
 
   Future<void> _inicializarDados() async {
     await carregarInstrumentosDisponiveis();
+    await carregarGenerosDisponiveis();
     await carregarPerfil();
   }
 
@@ -241,7 +245,7 @@ class ProfileViewModel extends ChangeNotifier {
       // Carrega Gêneros
       final generosData = await _supabase
           .from('musico_generos')
-          .select()
+          .select('genero_id, is_prioritario, generos_musicais(genero_nome)')
           .eq('perfil_id', userId);
       _meusGeneros = List<Map<String, dynamic>>.from(generosData);
 
@@ -302,6 +306,34 @@ class ProfileViewModel extends ChangeNotifier {
       await carregarDadosExtras();
     } catch (e) {
       debugPrint('Erro ao salvar gênero: $e');
+    }
+  }
+
+  Future<void> carregarGenerosDisponiveis() async {
+    try {
+      final data = await _supabase
+          .from('generos_musicais')
+          .select()
+          .order('genero_nome');
+      _todosGeneros = List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      debugPrint('Erro ao carregar lista de gêneros: $e');
+    }
+  }
+
+  Future<bool> removerGenero(int generoId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return false;
+    try {
+      await _supabase
+          .from('musico_generos')
+          .delete()
+          .eq('perfil_id', userId)
+          .eq('genero_id', generoId);
+      await carregarDadosExtras();
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 }

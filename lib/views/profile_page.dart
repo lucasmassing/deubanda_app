@@ -193,6 +193,94 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  void _mostrarModalAdicionarGenero(
+    BuildContext context,
+    ProfileViewModel viewModel,
+  ) {
+    int? generoSelecionado;
+    bool isPrioritario = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Adicionar Gênero Musical',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    decoration: const InputDecoration(
+                      labelText: 'Gênero',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: generoSelecionado,
+                    items: viewModel.todosGeneros.map((g) {
+                      return DropdownMenuItem<int>(
+                        value: g['genero_id'],
+                        child: Text(g['genero_nome']),
+                      );
+                    }).toList(),
+                    onChanged: (val) =>
+                        setModalState(() => generoSelecionado = val),
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    title: const Text('Gênero Prioritário?'),
+                    subtitle: const Text(
+                      'Marque se este for o seu estilo principal.',
+                    ),
+                    value: isPrioritario,
+                    onChanged: (val) =>
+                        setModalState(() => isPrioritario = val),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (generoSelecionado != null) {
+                          Navigator.pop(context);
+                          await viewModel.salvarGenero(
+                            generoSelecionado!,
+                            isPrioritario,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Adicionar'),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<ProfileViewModel>();
@@ -374,6 +462,80 @@ class _ProfilePageState extends State<ProfilePage> {
                             onPressed: () => viewModel.removerInstrumento(
                               item.instrumentoId,
                             ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24.0),
+                  child: Divider(thickness: 2),
+                ),
+
+                // SEÇÃO DE GÊNEROS MUSICAIS
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Meus Gêneros Musicais',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.add_circle,
+                        color: Colors.deepPurple,
+                        size: 32,
+                      ),
+                      onPressed: () =>
+                          _mostrarModalAdicionarGenero(context, viewModel),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                if (viewModel.meusGeneros.isEmpty)
+                  const Text(
+                    'Nenhum gênero adicionado. Clique no "+" para adicionar.',
+                  )
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: viewModel.meusGeneros.length,
+                    itemBuilder: (context, index) {
+                      final item = viewModel.meusGeneros[index];
+                      // Pega o nome do gênero dentro do objeto populado pelo JOIN
+                      final nomeGenero =
+                          item['generos_musicais']?['genero_nome'] ??
+                          'Desconhecido';
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: Icon(
+                            item['is_prioritario']
+                                ? Icons.star
+                                : Icons.music_video,
+                            color: item['is_prioritario']
+                                ? Colors.amber
+                                : Colors.deepPurple,
+                          ),
+                          title: Text(
+                            nomeGenero,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            item['is_prioritario']
+                                ? 'Gênero Prioritário'
+                                : 'Gênero Secundário',
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () =>
+                                viewModel.removerGenero(item['genero_id']),
                           ),
                         ),
                       );
