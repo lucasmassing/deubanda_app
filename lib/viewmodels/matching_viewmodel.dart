@@ -79,4 +79,49 @@ class MatchingViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  List<Map<String, dynamic>> _pedidosRecebidos = [];
+  List<Map<String, dynamic>> get pedidosRecebidos => _pedidosRecebidos;
+
+  Future<void> carregarPedidosRecebidos() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      final data = await _supabase
+          .from('matchings')
+          .select('''
+            match_id,
+            match_status,
+            perfis_musicos!matchings_musico_origem_id_fkey (
+              perfil_nome,
+              perfil_cidade,
+              perfil_bio
+            )
+          ''')
+          .eq('musico_destino_id', userId)
+          .eq('match_status', 'PENDENTE');
+
+      _pedidosRecebidos = List<Map<String, dynamic>>.from(data);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Erro ao carregar pedidos de conexão: $e');
+    }
+  }
+
+  Future<bool> responderPedido(String matchId, String novoStatus) async {
+    try {
+      await _supabase
+          .from('matchings')
+          .update({'match_status': novoStatus})
+          .eq('match_id', matchId);
+
+      _pedidosRecebidos.removeWhere((p) => p['match_id'] == matchId);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Erro ao responder pedido: $e');
+      return false;
+    }
+  }
 }

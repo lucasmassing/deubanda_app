@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/matching_viewmodel.dart';
+import 'pedidos_conexao_page.dart';
 
 class FeedPage extends StatelessWidget {
   const FeedPage({super.key});
@@ -13,6 +14,15 @@ class FeedPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Explorar Músicos'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PedidosConexaoPage()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: viewModel.carregarFeed,
