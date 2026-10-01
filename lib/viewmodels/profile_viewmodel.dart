@@ -17,6 +17,12 @@ class ProfileViewModel extends ChangeNotifier {
   List<MusicoInstrumento> _meusInstrumentos = [];
   List<MusicoInstrumento> get meusInstrumentos => _meusInstrumentos;
 
+  List<Map<String, dynamic>> _meusGeneros = [];
+  List<Map<String, dynamic>> get meusGeneros => _meusGeneros;
+
+  List<String> _horariosDisponiveis = []; // Formato: "Segunda-Manhã"
+  List<String> get horariosDisponiveis => _horariosDisponiveis;
+
   bool _isFetching = true;
   bool get isFetching => _isFetching;
 
@@ -81,6 +87,7 @@ class ProfileViewModel extends ChangeNotifier {
 
         // Busca os instrumentos que o usuário toca (fazendo JOIN com a tabela de instrumentos)
         await carregarMeusInstrumentos(user.id);
+        await carregarDadosExtras();
       }
     } catch (e) {
       _errorMessage = 'Erro ao carregar dados do perfil.';
@@ -207,5 +214,94 @@ class ProfileViewModel extends ChangeNotifier {
   Future<void> fazerLogout() async {
     limparDados(); // Limpa o estado da memória antes de sair
     await _supabase.auth.signOut();
+  }
+
+  // disponiblidade semanal e gêneros musicais
+
+  final List<String> _diasSemana = [
+    'Segunda',
+    'Terça',
+    'Quarta',
+    'Quinta',
+    'Sexta',
+    'Sábado',
+    'Domingo',
+  ];
+  final List<String> _turnos = ['Manhã', 'Tarde', 'Noite'];
+
+  List<String> get diasSemana => _diasSemana;
+  List<String> get turnos => _turnos;
+
+  // --- NOVOS MÉTODOS ---
+  Future<void> carregarDadosExtras() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      // Carrega Gêneros
+      final generosData = await _supabase
+          .from('musico_generos')
+          .select()
+          .eq('perfil_id', userId);
+      _meusGeneros = List<Map<String, dynamic>>.from(generosData);
+
+      // Carrega Disponibilidade
+      final dispData = await _supabase
+          .from('disponibilidade_semanal')
+          .select()
+          .eq('perfil_id', userId);
+      _horariosDisponiveis = (dispData as List)
+          .map((d) => '${d['dia_semana']}-${d['turno']}')
+          .toList();
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Erro ao carregar dados extras: $e');
+    }
+  }
+
+  Future<void> alternarHorario(String dia, String turno) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final chave = '$dia-$turno';
+    final existe = _horariosDisponiveis.contains(chave);
+
+    try {
+      if (existe) {
+        await _supabase.from('disponibilidade_semanal').delete().match({
+          'perfil_id': userId,
+          'dia_semana': dia,
+          'turno': turno,
+        });
+        _horariosDisponiveis.remove(chave);
+      } else {
+        await _supabase.from('disponibilidade_semanal').insert({
+          'perfil_id': userId,
+          'dia_semana': dia,
+          'turno': turno,
+        });
+        _horariosDisponiveis.add(chave);
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Erro ao atualizar horário: $e');
+    }
+  }
+
+  Future<void> salvarGenero(int generoId, bool isPrioritario) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      await _supabase.from('musico_generos').insert({
+        'perfil_id': userId,
+        'genero_id': generoId,
+        'is_prioritario': isPrioritario,
+      });
+      await carregarDadosExtras();
+    } catch (e) {
+      debugPrint('Erro ao salvar gênero: $e');
+    }
   }
 }

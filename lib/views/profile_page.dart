@@ -68,7 +68,10 @@ class _ProfilePageState extends State<ProfilePage> {
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -376,11 +379,92 @@ class _ProfilePageState extends State<ProfilePage> {
                       );
                     },
                   ),
+                const SizedBox(height: 24),
+                _buildGradeHoraria(context, viewModel),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildGradeHoraria(BuildContext context, ProfileViewModel viewModel) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 32),
+        const Text(
+          'Disponibilidade (Dimensão Logística)',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Selecione os turnos em que tem disponibilidade para ensaios:',
+        ),
+        const SizedBox(height: 16),
+        Table(
+          border: TableBorder.all(color: Colors.grey.shade300),
+          children: [
+            // Cabeçalho dos turnos
+            TableRow(
+              decoration: BoxDecoration(color: Colors.deepPurple.shade50),
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    'Dia',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ...viewModel.turnos.map(
+                  (t) => Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      t,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Linhas dos dias da semana
+            ...viewModel.diasSemana.map((dia) {
+              return TableRow(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      dia,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  ...viewModel.turnos.map((turno) {
+                    final isSelecionado = viewModel.horariosDisponiveis
+                        .contains('$dia-$turno');
+                    return InkWell(
+                      onTap: () => viewModel.alternarHorario(dia, turno),
+                      child: Container(
+                        color: isSelecionado
+                            ? Colors.deepPurple
+                            : Colors.transparent,
+                        padding: const EdgeInsets.all(8.0),
+                        child: Icon(
+                          isSelecionado ? Icons.check : Icons.add,
+                          color: isSelecionado
+                              ? Colors.white
+                              : Colors.grey.shade400,
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              );
+            }),
+          ],
+        ),
+      ],
     );
   }
 }
